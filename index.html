@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Mouse Guard Conflict Calculator</title>
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css"
+            integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+
+        <script type="text/javascript" src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+        <style type="text/css">
+            #conflict-types tr:hover,
+            #moves-lookup tr:hover {
+                background-color: rgb(238, 173, 120);
+                cursor: pointer;
+            }
+
+            #conflict-types .selected {
+                background-color: rgb(120, 204, 238) !important;
+            }
+
+            #outcome {
+                width: 50%;
+            }
+
+            h2 {
+                margin-bottom: 10px;
+                border-bottom: 1px solid #ccc;
+            }
+
+            #gear,
+            #conflict-calculator-section {
+                display: none;
+            }
+
+            #gear th,
+            #gear td {
+                width: 50%;
+            }
+
+            section {
+                background: rgba(255, 255, 255, 0.9);
+                border-radius: 10px;
+                padding: 20px;
+                margin: 20px;
+            }
+
+            html,
+            body {
+                width: 100%;
+                height: 100%;
+                margin: 0;
+            }
+
+            body {
+                background-image: url(mouse-guard-background.jpg);
+                background-size: cover;
+                background-repeat: no-repeat;
+                background-position: center;
+            }
+        </style>
+
+        <script type="text/javascript">
+            (function ($)
+            {
+                // The selected conflict type, eg. "fight".
+                let conflictType = null;
+
+                // Your selected move, eg. "attack".
+                let yourMove = null;
+
+                // Your opponent's selected move, eg. "defend".
+                let opponentsMove = null;
+
+                // Your weapon, eg. "knife".
+                let weapon = 'none';
+
+                // Your armour, eg. "heavy".
+                let armour = 'none';
+
+                /**
+                 * Called by event handlers to update the selected items states.
+                 */
+                const updateState = function ()
+                {
+                    // Conflict moves.
+                    yourMove = $('input[name="you"]:checked').val();
+                    opponentsMove = $('input[name="opponent"]:checked').val();
+
+                    // Gear.
+                    weapon = $('input[name="weapon"]:checked').val();
+                    armour = $('input[name="armour"]:checked').val();
+
+                    updateMove();
+                    updateArmour();
+                }
+
+                /**
+                 * Event handler for clicking on a conflict type row.
+                 */
+                const onSelectType = function ()
+                {
+                    // The type of conflict (fight, journey, etc.)
+                    const type = $(this).data('type');
+                    conflictType = type ? type : null;
+
+                    $('#conflict-types tbody tr').each(function ()
+                    {
+                        const type = $(this).data('type');
+
+                        if (type && type !== conflictType)
+                            $(this).removeClass('selected');
+                    });
+
+                    if (conflictType)
+                    {
+                        $(this).addClass('selected');
+                        $('#conflict-calculator-section').fadeIn();
+                    }
+
+                    if (conflictType === 'fight' || conflictType === 'fightAnimal')
+                    {
+                        $('#gear').slideDown();
+                    }
+                    else
+                    {
+                        $('input[name="weapon"][value="none"]').prop('checked', true).trigger('change');
+                        $('input[name="armour"][value="none"]').prop('checked', true).trigger('change');
+                        $('#gear').slideUp();
+                    }
+
+                    updateState();
+                };
+
+                /**
+                 * Update the conflict table with the rules and outcome.
+                 */
+                const updateMove = function()
+                {
+                    if (!yourMove || !opponentsMove)
+                        return;
+
+                    const versus = '<b>Versus</b>. Roll skills or abilities against each other. Highest successes wins.';
+                    const independent = '<b>Independent</b>. Test both actions separately; both actions can succeed or fail.';
+
+                    const outcomes = {
+                        attack: {
+                            attack: independent,
+                            defend: versus,
+                            feint: '<b>Win</b>. Your opponent cannot block your attack.',
+                            maneuver: versus,
+                        },
+                        defend: {
+                            attack: versus,
+                            defend: independent,
+                            feint: '<b>Lose</b>. Your opponent succeeds fully in their attack.',
+                            maneuver: versus,
+                        },
+                        feint: {
+                            attack: '<b>Lose</b>. Your opponent succeeds fully in their attack.',
+                            defend: '<b>Win</b>. Your attack succeeds, the opponent cannot roll.',
+                            feint: versus,
+                            maneuver: versus,
+                        },
+                        maneuver: {
+                            attack: versus,
+                            defend: versus,
+                            feint: independent,
+                            maneuver: independent,
+                        },
+                    };
+
+                    const skills = {
+                        argument: {
+                            attack: 'Persuader',
+                            defend: 'Persuader',
+                            feint: 'Persuader / Deceiver',
+                            maneuver: 'Persuader / Deceiver',
+                        },
+                        chase: {
+                            attack: 'Scout',
+                            defend: 'Pathfinder',
+                            feint: 'Pathfinder',
+                            maneuver: 'Scout',
+                        },
+                        fight: {
+                            attack: 'Fighter',
+                            defend: 'Nature',
+                            feint: 'Fighter',
+                            maneuver: 'Nature',
+                        },
+                        fightAnimal: {
+                            attack: 'Fighter / Hunter',
+                            defend: 'Lore / Nature',
+                            feint: 'Fighter / Hunter',
+                            maneuver: 'Lore / Nature',
+                        },
+                        negotiation: {
+                            attack: 'Haggler',
+                            defend: 'Haggler',
+                            feint: 'Deceiver',
+                            maneuver: 'Deceiver',
+                        },
+                        journey: {
+                            attack: 'Pathfinder',
+                            defend: 'Survivalist / Weather Watcher',
+                            feint: 'Pathfinder',
+                            maneuver: 'Survivalist / Weather Watcher',
+                        },
+                        speech: {
+                            attack: 'Orator',
+                            defend: 'Orator',
+                            feint: 'Orator / Deceiver',
+                            maneuver: 'Orator / Deceiver',
+                        },
+                        war: {
+                            attack: 'Militarist',
+                            defend: 'Militarist / Orator / Administrator',
+                            feint: 'Militarist / Administrator',
+                            maneuver: 'Militarist',
+                        },
+                    };
+
+                    const weaponNotes = {
+                        axe: {
+                            attack: '<b>Deadly</b>: Add +1 success to a successful attack',
+                            defend: '<b>Slow</b>: -1 die',
+                            feint: '<b>Slow</b>: -1 die',
+                        },
+                        bow: {
+                            attack: {
+                                defend: '<b>Hard to Defend</b>: Add +1 die',
+                            },
+                            maneuver: '<b>Long Range</b>: +2 dice against normal, spear, or thrown weapons',
+                        },
+                        halberd: {
+                            attack: '<b>Versatile</b>: Choose to use it as an Axe or a Spear before announcing the first action',
+                            defend: '<b>Versatile</b>: Choose to use it as an Axe or a Spear before announcing the first action',
+                            feint: '<b>Versatile</b>: Choose to use it as an Axe or a Spear before announcing the first action',
+                            maneuver: '<b>Versatile</b>: Choose to use it as an Axe or a Spear before announcing the first action',
+                        },
+                        hookAndLine: {
+                            maneuver: '<b>Hooked</b>: Add +1 die, and +1 success if successful',
+                            attack: '<b>Unweildy</b>: Subtract -1 die',
+                        },
+                        knife: {
+                            maneuver: '<b>Short and Quick</b>: A successful maneuver against a spear, thrown or missile weapon gives a disarm effect as well as the normal margin of success effects',
+                        },
+                        shield: {
+                            defend: '<b>Protection</b>: Add +2 dice',
+                        },
+                        sling: {
+                            maneuver: '<b>Range</b>: Add +1 die',
+                        },
+                        spear: {
+                            maneuver: '<b>Spear</b>: Add +1 die against normal weapons',
+                        },
+                        staff: {
+                            feint: '<b>Handy</b>: Add +1 die',
+                        },
+                        sword: {
+                            attack: '<b>Useful</b>: Add +1 die to one action (attack, defend, feint, maneuver) for all uses of that action in the combat',
+                            defend: '<b>Useful</b>: Add +1 die to one action (attack, defend, feint, maneuver) for all uses of that action in the combat',
+                            feint: '<b>Useful</b>: Add +1 die to one action (attack, defend, feint, maneuver) for all uses of that action in the combat',
+                            maneuver: '<b>Useful</b>: Add +1 die to one action (attack, defend, feint, maneuver) for all uses of that action in the combat',
+                        },
+                    };
+
+                    const specialOutcomes = {
+                        bow: {
+                            attack: {
+                                attack: '<b>Versus</b> against a short ranged weapon, <b>Independent</b> otherwise'
+                            },
+                        },
+                        knife: {
+                            attack: {
+                                attack: '<b>Versus</b> when thrown against a spear or normal weapon, <b>Independent</b> otherwise',
+                                maneuver: 'Independent when thrown, Versus otherwise',
+                            },
+                        },
+                        sling: {
+                            attack: {
+                                attack: '<b>Versus</b> against shorter-ranged weapons, <b>Independent</b> otherwise',
+                                maneuver: independent,
+                            }
+                        },
+                        spear: {
+                            attack: {
+                                attack: '<v>Versus</v> against short range weapons, <b>Independent</b> otherwise',
+                                maneuver: '<v>Independent</v> against short range weapons, <b>Versus</b> otherwise',
+                            },
+                        },
+                        staff: {
+                            attack: {
+                                attack: '<b>Versus</b> if thrown, <b>Independent</b> otherwise',
+                                maneuver: '<b>Independent</b> if thrown, <b>Versus</b> otherwise',
+                            },
+                        },
+                    };
+
+                    let outcome = outcomes[yourMove][opponentsMove];
+                    let weaponNote = '';
+
+                    if (specialOutcomes[weapon] && specialOutcomes[weapon][yourMove] && specialOutcomes[weapon][yourMove][opponentsMove])
+                        outcome = specialOutcomes[weapon][yourMove][opponentsMove];
+
+                    if (weaponNotes[weapon] && weaponNotes[weapon][yourMove] && typeof weaponNotes[weapon][yourMove] === 'string')
+                        weaponNote = weaponNotes[weapon][yourMove];
+
+                    if (weaponNotes[weapon] && weaponNotes[weapon][yourMove] && weaponNotes[weapon][yourMove][opponentsMove])
+                        weaponNote = weaponNotes[weapon][yourMove][opponentsMove];
+
+                    if (conflictType)
+                    {
+                        if (yourMove === 'feint' && opponentsMove === 'attack' || yourMove === 'defend' && opponentsMove === 'feint')
+                            outcome = '<b>No roll</b> - automatic loss.<br><br>' + outcome;
+                        else
+                            outcome = 'Roll <b>' + skills[conflictType][yourMove] + '</b>.<br><br>' + outcome;
+                    }
+
+                    outcome = outcome + '<br><br>' + weaponNote;
+
+                    $('#outcome').html(outcome);
+                };
+
+                /**
+                 * Update the information about the selected armour type.
+                 */
+                const updateArmour = function ()
+                {
+                    armourEffects = {
+                        none: '',
+                        light: '<b>Armour</b>: Add +1 die to your disposition roll for the fight<br><b>Heavy</b>: -1 die to <b>Health</b> tests to resist fatigue',
+                        heavy: '<b>Armour</b>: Add +1 success to your disposition roll for the fight<br><b>Heavy</b>: -1 die to <b>Health</b> tests to resist fatigue<br><b>Clumsy</b>: -1 die to <b>Maneuver</b>, -1 die to <b>Scout</b> and <b>Nature</b> for sneaking or hiding',
+                    };
+
+                    $('#armour').html(armourEffects[armour]);
+                };
+
+                /**
+                 * Startup function, called on document ready.
+                 */
+                $(function ()
+                {
+                    // Register event handlers.
+                    $('#conflict-types').on('click', 'tbody tr', onSelectType);
+                    $('#moves').on('click', 'tbody tr', updateState);
+                    $('input[name="weapon"], input[name="armour"]').on('change', updateState);
+                });
+            })(jQuery);
+        </script>
+    </head>
+    <body>
+        <div class="container">
+            <section>
+                <h2>Conflict Types</h2>
+
+                <table class="table table-striped" id="conflict-types">
+                    <thead>
+                        <tr>
+                            <th>Conflict Type / Action</th>
+                            <th>Attack</th>
+                            <th>Defend</th>
+                            <th>Feint</th>
+                            <th>Maneuver</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr data-type="argument">
+                            <th>Argument</th>
+                            <td>Persuader</td>
+                            <td>Persuader</td>
+                            <td>Persuader / Deceiver</td>
+                            <td>Persuader / Deceiver</td>
+                        </tr>
+                        <tr data-type="chase">
+                            <th>Chase</th>
+                            <td>Scout</td>
+                            <td>Pathfinder</td>
+                            <td>Pathfinder</td>
+                            <td>Scout</td>
+                        </tr>
+                        <tr data-type="fight">
+                            <th>Fight</th>
+                            <td>Fighter</td>
+                            <td>Nature</td>
+                            <td>Fighter</td>
+                            <td>Nature</td>
+                        </tr>
+                        <tr data-type="fightAnimal">
+                            <th>Fight Animal</th>
+                            <td>Fighter / Hunter</td>
+                            <td>Lore / Nature</td>
+                            <td>Fighter / Hunter</td>
+                            <td>Lore / Nature</td>
+                        </tr>
+                        <tr data-type="negotiation">
+                            <th>Negotiation</th>
+                            <td>Haggler</td>
+                            <td>Haggler</td>
+                            <td>Deceiver</td>
+                            <td>Deceiver</td>
+                        </tr>
+                        <tr data-type="journey">
+                            <th>Journey</th>
+                            <td>Pathfinder</td>
+                            <td>Survivalist / Weather Watcher</td>
+                            <td>Pathfinder</td>
+                            <td>Survivalist / Weather Watcher</td>
+                        </tr>
+                        <tr data-type="speech">
+                            <th>Speech</th>
+                            <td>Orator</td>
+                            <td>Orator</td>
+                            <td>Orator / Deceiver</td>
+                            <td>Orator / Deceiver</td>
+                        </tr>
+                        <tr data-type="war">
+                            <th>War</th>
+                            <td>Militarist</td>
+                            <td>Militarist / Orator / Administrator</td>
+                            <td>Militarist / Administrator</td>
+                            <td>Militarist</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <section id="conflict-calculator-section">
+                <h2>Conflict Calculator</h2>
+
+                <table class="table table-sm table-striped" id="gear">
+                    <thead>
+                        <tr>
+                            <th>Weapon</th>
+                            <th>Armour</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><label><input type="radio" name="weapon" value="none" checked> None</label></td>
+                            <td><label><input type="radio" name="armour" value="none" checked> None</label></td>
+                        </tr>
+                        <tr>
+                            <td><label><input type="radio" name="weapon" value="axe"> Axe</label></td>
+                            <td><label><input type="radio" name="armour" value="light"> Light</label></td>
+                        </tr>
+                        <tr>
+                            <td><label><input type="radio" name="weapon" value="bow"> Bow</label></td>
+                            <td><label><input type="radio" name="armour" value="heavy"> Heavy</label></td>
+                        </tr>
+                        <tr>
+                            <td><label><input type="radio" name="weapon" value="halberd"> Halberd</label></td>
+                            <td rowspan="8" id="armour"></td>
+                        </tr>
+                        <tr>
+                            <td><label><input type="radio" name="weapon" value="hookAndLine"> Hook and Line</label></td>
+                        </tr>
+                        <tr>
+                            <td><label><input type="radio" name="weapon" value="knife"> Knife</label></td>
+                        </tr>
+                        <tr>
+                            <td><label><input type="radio" name="weapon" value="shield"> Shield</label></td>
+                        </tr>
+                        <tr>
+                            <td><label><input type="radio" name="weapon" value="sling"> Sling</label></td>
+                        </tr>
+                        <tr>
+                            <td><label><input type="radio" name="weapon" value="spear"> Spear</label></td>
+                        </tr>
+                        <tr>
+                            <td><label><input type="radio" name="weapon" value="staff"> Staff</label></td>
+                        </tr>
+                        <tr>
+                            <td><label><input type="radio" name="weapon" value="sword"> Sword</label></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <table id="moves" class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>You</th>
+                            <th>Opponent</th>
+                            <th>Outcome</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><label><input type="radio" value="attack" name="you"> Attack</label></td>
+                            <td><label><input type="radio" value="attack" name="opponent"> Attack</label></td>
+                            <td rowspan="4" id="outcome"></td>
+                        </tr>
+                        <tr>
+                            <td><label><input type="radio" value="defend" name="you"> Defend</label></td>
+                            <td><label><input type="radio" value="defend" name="opponent"> Defend</label></td>
+                        </tr>
+                        <tr>
+                            <td><label><input type="radio" value="feint" name="you"> Feint</label></td>
+                            <td><label><input type="radio" value="feint" name="opponent"> Feint</label></td>
+                        </tr>
+                        <tr>
+                            <td><label><input type="radio" value="maneuver" name="you"> Maneuver</label></td>
+                            <td><label><input type="radio" value="maneuver" name="opponent"> Maneuver</label></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+        </div>
+    </body>
+</html>
