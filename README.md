@@ -8,6 +8,10 @@ This simple tool helps you to decide:
 - What **weapon bonuses** you receive.
 - What **armour bonuses** you receive.
 
+Click he link to use it online!
+
+https://mrzebra.co.uk/mouse-guard/
+
 Usage
 -----
 
